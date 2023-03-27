@@ -1,0 +1,474 @@
+<!doctype html>
+<html>
+	<head>
+	<style>
+		.btn{ display: inline-block; text-align: center; white-space: nowrap; vertical-align: middle; border: 1px solid transparent; }
+		.btn-link{ background-color: transparent; cursor: pointer; }
+		.btn-link:hover{ text-decoration: underline; border-color: transparent; background-color: transparent; }
+		.lookDisabled{ color: #545454; font-style: italic;}
+		.lookDisabled input, input.lookDisabled, select.lookDisabled, textarea.lookDisabled { background-color: rgb(235, 235, 228); color: #545454; }
+		.small{ font-size: small; }
+	</style>
+	</head>
+	<body ng-app="oidc-client" ng-controller="MainController">
+		<a  class="external" href="https://openid.net/specs/openid-connect-core-1_0.html">OpenID Connect Core 1.0 incorporating errata set 1</a><br/>
+		
+		<div ng-controller="Step1">
+			<h3>Begin Request</h3>
+			<p><a class="external" href="https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.3.1.2.1" onclick="event.preventDefault();window.open(this.href);">Authentication Request specifications</a></small></p>
+			<form id="step1" method="GET" action="{{ authorization_endpoint | trustUrl }}" ng-submit="beforeSubmit()">
+				<div>
+					<input id="auth_endpoint" type="text" ng-model="authorization_endpoint" style="width: 40em;">?
+				</div>
+				<div style="padding-left: 1rem;">
+					<div>
+					&amp;scope=<input type="text" name="scope" value="openid"
+						title="REQUIRED. OpenID Connect requests MUST contain the openid scope value. If the openid scope value is not present, the behavior is entirely unspecified. Other scope values MAY be present. Scope values used that are not understood by an implementation SHOULD be ignored. See Sections 5.4 and 11 for additional scope values defined by this specification.">
+						<code>openid profile email phone offline_access</code>
+					</div>
+					<div>
+						&amp;response_type=<select name="response_type" ng-model="response_type" ng-change="onResponseTypeChange()" 
+									   title="REQUIRED. OAuth 2.0 Response Type value that determines the authorization processing flow to be used, including what parameters are returned from the endpoints used. When using the Authorization Code Flow, this value is code.">
+							<optgroup label="Authorization Code">
+								<option>code</option>
+								<option label="code + PKCE">code</option>
+							</optgroup>
+							<optgroup label="Implicit Flow">
+								<option>id_token</option>
+								<option>id_token token</option>
+							</optgroup>
+							<optgroup label="Hybrid Flow">
+								<option>code id_token</option>
+								<option>code token</option>
+								<option>code id_token token</option>
+							</optgroup>
+							<optgroup label="OAuth2">
+								<option>token</option>
+								<option>none</option>
+							</optgroup>
+						  </select>
+					</div>
+					<div>
+						&amp;client_id=<input type="text" name="client_id" ng-model="client_id"
+									          title="REQUIRED. OAuth 2.0 Client Identifier valid at the Authorization Server.">
+					</div>
+					<div>
+						&amp;redirect_uri=<input type="text" name="redirect_uri" ng-model="redirect_uri" style="width: 40em;"
+						                         title="REQUIRED. Redirection URI to which the response will be sent. This URI MUST exactly match one of the Redirection URI values for the Client pre-registered at the OpenID Provider, with the matching performed as described in Section 6.2.1 of [RFC3986] (Simple String Comparison). When using this flow, the Redirection URI SHOULD use the https scheme; however, it MAY use the http scheme, provided that the Client Type is confidential, as defined in Section 2.1 of OAuth 2.0, and provided the OP allows the use of http Redirection URIs in this case. The Redirection URI MAY use an alternate scheme, such as one that is intended to identify a callback into a native application.">
+					</div>
+					<div class="step1-state">
+						&amp;state=<input type="text" name="state" ng-model="state" disable-when-empty
+						title="RECOMMENDED. Opaque value used to maintain state between the request and the callback. Typically, Cross-Site Request Forgery (CSRF, XSRF) mitigation is done by cryptographically binding the value of this parameter with a browser cookie.">
+					</div>
+					<div>
+						&amp;nonce=<input type="text" name="nonce" ng-model="nonce" disable-when-empty
+						title="OPTIONAL. String value used to associate a Client session with an ID Token, and to mitigate replay attacks. The value is passed through unmodified from the Authentication Request to the ID Token. Sufficient entropy MUST be present in the nonce values used to prevent attackers from guessing values. For implementation notes, see Section 15.5.2.">
+						<small><a href="https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.15.5.2" class="external">Implementation Notes</a></small>
+					</div>
+					<!--
+					&amp;claims=<input type="text" name="claims" style="width: 40em;" ng-model="claims" disable-when-empty><br/>
+					-->
+					&amp;display=<select name="display" disable-when-empty ng-model="display"
+						title="OPTIONAL. ASCII string value that specifies how the Authorization Server displays the authentication and consent user interface pages to the End-User.">
+						<option></option>
+						<option>page</option>
+						<option>popup</option>
+						<option>touch</option>
+						<option>wap</option>
+					</select>
+					<div>
+						&amp;prompt=<input type="text" name="prompt" ng-model="prompt" disable-when-empty
+							title="OPTIONAL. Space delimited, case sensitive list of ASCII string values that specifies whether the Authorization Server prompts the End-User for reauthentication and consent.">
+							<code>
+								<span title="The Authorization Server MUST NOT display any authentication or consent user interface pages. An error is returned if an End-User is not already authenticated or the Client does not have pre-configured consent for the requested Claims or does not fulfill other conditions for processing the request. The error code will typically be login_required, interaction_required, or another code defined in Section 3.1.2.6. This can be used as a method to check for existing authentication and/or consent.">none</span>
+								<span title="The Authorization Server SHOULD prompt the End-User for reauthentication. If it cannot reauthenticate the End-User, it MUST return an error, typically login_required.">login</login>
+								<span title="The Authorization Server SHOULD prompt the End-User for consent before returning information to the Client. If it cannot obtain consent, it MUST return an error, typically consent_required.">consent</login>
+								<span title="The Authorization Server SHOULD prompt the End-User to select a user account. This enables an End-User who has multiple accounts at the Authorization Server to select amongst the multiple accounts that they might have current sessions for. If it cannot obtain an account selection choice made by the End-User, it MUST return an error, typically account_selection_required.">select_account</login>
+							</code>
+					</div>
+					<div>
+						&amp;max_age=<input type="text" name="max_age" ng-model="max_age" disable-when-empty
+							title="OPTIONAL. Maximum Authentication Age. Specifies the allowable elapsed time in seconds since the last time the End-User was actively authenticated by the OP. If the elapsed time is greater than this value, the OP MUST attempt to actively re-authenticate the End-User. (The max_age request parameter corresponds to the OpenID 2.0 PAPE [OpenID.PAPE] max_auth_age request parameter.) When max_age is used, the ID Token returned MUST include an auth_time Claim Value.">
+					</div>
+					<div>
+						&amp;ui_locales=<input type="text" name="ui_locales" ng-model="ui_locales" disable-when-empty
+							title="OPTIONAL. End-User's preferred languages and scripts for the user interface, represented as a space-separated list of BCP47 [RFC5646] language tag values, ordered by preference. For instance, the value &quot;fr-CA fr en&quot; represents a preference for French as spoken in Canada, then French (without a region designation), followed by English (without a region designation). An error SHOULD NOT result if some or all of the requested locales are not supported by the OpenID Provider.">
+					</div>
+					<div>
+						&amp;id_token_hint=<input type="text" name="id_token_hint" ng-model="id_token_hint" disable-when-empty
+							title="OPTIONAL. ID Token previously issued by the Authorization Server being passed as a hint about the End-User's current or past authenticated session with the Client. If the End-User identified by the ID Token is logged in or is logged in by the request, then the Authorization Server returns a positive response; otherwise, it SHOULD return an error, such as login_required. When possible, an id_token_hint SHOULD be present when prompt=none is used and an invalid_request error MAY be returned if it is not; however, the server SHOULD respond successfully when possible, even if it is not present. The Authorization Server need not be listed as an audience of the ID Token when it is used as an id_token_hint value.
+If the ID Token received by the RP from the OP is encrypted, to use it as an id_token_hint, the Client MUST decrypt the signed ID Token contained within the encrypted ID Token. The Client MAY re-encrypt the signed ID token to the Authentication Server using a key that enables the server to decrypt the ID Token, and use the re-encrypted ID token as the id_token_hint value.">
+					</div>
+					<div>
+						&amp;login_hint=<input type="text" name="login_hint" ng-model="login_hint" disable-when-empty
+							title="OPTIONAL. Hint to the Authorization Server about the login identifier the End-User might use to log in (if necessary). This hint can be used by an RP if it first asks the End-User for their e-mail address (or other identifier) and then wants to pass that value as a hint to the discovered authorization service. It is RECOMMENDED that the hint value match the value used for discovery. This value MAY also be a phone number in the format specified for the phone_number Claim. The use of this parameter is left to the OP's discretion.">
+					</div>
+					<div>
+						&amp;acr_values=<input type="text" name="acr_values" ng-model="acr_values" disable-when-empty
+							title="OPTIONAL. Requested Authentication Context Class Reference values. Space-separated string that specifies the acr values that the Authorization Server is being requested to use for processing this Authentication Request, with the values appearing in order of preference. The Authentication Context Class satisfied by the authentication performed is returned as the acr Claim Value, as specified in Section 2. The acr Claim is requested as a Voluntary Claim by this parameter.">
+					</div>
+					<div>
+						&amp;claims=<textarea name="claims" ng-model="claims" disable-when-empty rows="5" cols="80" style="vertical-align: top;"
+							title="OPTIONAL. This parameter is used to request that specific Claims be returned. The value is a JSON object listing the requested Claims."></textarea>
+					</div>
+				</div>
+				<input type="submit" value="Send">
+			</form>
+		</div>
+
+		<div ng-controller="ImplicitFlowStep2" ng-show="time">
+			<span class="small">[{{ time.toLocaleDateString() + ' ' + time.toLocaleTimeString() }}]</span>
+			<!-- HANDLE IMPLICIT FLOW RESPONSE -->
+		</div>
+		<div ng-controller="CodeFlowStep2" ng-show="data">
+			<h3>Auth code result</h3>
+			<span class="small">[{{ time.toLocaleDateString() + ' ' + time.toLocaleTimeString() }}]</span>
+			<code><pre>{{ data | json }}</pre></code>
+		</div>
+
+		<div ng-controller="CodeFlowStep3">
+			<h3>Exchange auth code with tokens</h3>
+
+			<fieldset>
+				<legend>Autentication</legend>
+				<div>
+					Client ID: <input type="text" ng-model="client_id">
+				</div>
+				<div>
+					Client Secret: <input type="text" ng-model="client_secret">
+				</div>
+			</fieldset>
+
+			<fieldset>
+				<legend>Endpoint</legend>
+				<form id="step3" method="POST" action="{{ token_endpoint | trustUrl }}" ng-submit="submit($event)">
+					<div>
+						<input id="token_endpoint" type="text" ng-model="token_endpoint" style="width: 40em;">?
+					</div>
+					<div style="padding-left: 1rem;">
+						grant_type=<input type="text" name="grant_type" ng-model="grant_type" disable-when-empty > <code><button class="btn btn-link" ng-click="codeClick($event)">authorization_code</button> <button class="btn btn-link" ng-click="refreshClick($event)">refresh_token</button></code><br/>
+						&code=<input type="text" name="code" ng-model="code" disable-when-empty><br/>
+						&redirect_uri=<input type="text" name="redirect_uri" ng-model="redirect_uri" style="width: 40em;" disable-when-empty><br/>
+						<!--
+						&client_id=<input type="text" name="client_id" ng-model="client_id"><br/>
+						&client_secret=<input type="text" name="client_secret" ng-model="client_secret"><br/>
+						-->
+						&refresh_token=<input type="text" name="refresh_token" ng-model="refresh_token" disable-when-empty><br/>
+						&scope=<input type="text" name="scope" ng-model="scope" disable-when-empty><br/>
+					</div>
+					<p>
+					<label title="When a response contains a refresh_token, this form will set to refresh them."><input type="checkbox" ng-model="syncRefresh">Track refresh token</label><br/>
+					<input type="submit" value="Send">
+					</p>
+				</form>
+			</fieldset>
+			<code>curl -X POST -u "{{client_id}}:{{client_secret}}" --data "code={{code}}" --data "redirect_uri={{redirect_uri}}" --data "refresh_token={{refresh_token}}" --data "scope={{scope}}" --data "grant_type={{grant_type}}" "{{token_endpoint | trustUrl}}"</code>
+			<p ng-show="error" style="color: red;">
+				<strong>An error is occured:</strong><br/>
+				{{error}}
+			</p>
+			<div ng-show="unknownError" style="color: red;">
+				<strong>An error is occured:</strong><br/>
+				Maybe the IDP doesn't allow {{origin}} origin, try to do following checks:
+				<ul>
+					<li>Add <code>{{origin}}</code> to the client's allowed web origins</li>
+					<li>
+						Client has access type <code>confidential</code> and no client secret has been sent.
+						Set it to <code>public</code> or send the client secret.
+					</li>
+					<li>
+						Client has access type <code>confidential</code> and a wrong client secret has been sent.
+						Check the client secret correctness.
+					</li>
+				</ul>
+			</div>
+
+		</div>
+
+			<div ng-controller="IDPResponse" ng-show="idpResponse">
+				<h3>IDP Response</h3>
+				<code><pre>{{idpResponse | json}}</pre></code>
+				<div ng-show="idpResponse.access_token">
+					Access Token<br/>
+					{{ idpResponse.access_token.length | number}} bytes length<br/>
+					<button ng-click="seeAccessToken()">
+						<img src="https://jwt.io/img/badge.svg">
+					</button>
+				</div>
+
+				<div ng-show="idpResponse.id_token" style="margin-top: 1rem;">
+					Id Token<br/>
+					{{ idpResponse.id_token.length | number}} bytes length<br/>
+					<button ng-click="seeIDToken()">
+						<img src="https://jwt.io/img/badge.svg">
+					</button>
+				</div>
+				
+				<div>
+					<h4>Userinfo Endpoint</h4>
+					<input type="text" ng-model="userinfoEndpoint" style="width: 40rem;"><button ng-click="getUserInfo()">GET UserInfo</button>
+					<pre><code>{{userinfo | json}}</code></pre>
+				</div>
+			</div>
+		
+			<div style="margin-top: 1em;">
+				<button ng-click="restart()">Start again</button>
+			</div>
+
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.8/angular.min.js"></script>
+		<script type="text/javascript">
+			function makeid(length) {
+			   var result           = '';
+			   var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+			   var charactersLength = characters.length;
+			   for ( var i = 0; i < length; i++ ) {
+				  result += characters.charAt(Math.floor(Math.random() * charactersLength));
+			   }
+			   return result;
+			}
+
+			angular.module('oidc-client',[])
+			.config(['$locationProvider', function($locationProvider) { $locationProvider.html5Mode({ enabled: true, requireBase: false }); }])
+			.directive('external', function($location){
+				return {
+					restrict: 'C',
+					link: function($scope, element, attrs){
+						element.before('&#128366;').css({'margin-left':'0.5em'});
+						element.on('click', function(event){
+							event.preventDefault();
+							window.open(element.href);
+						});
+					}
+				}
+			})
+			.directive('disableWhenEmpty', function(){
+				
+				function process(element, name, ngModel){
+					var value = ngModel.$modelValue;
+					if(!value || value.length == 0){
+						element.addClass('lookDisabled')
+						element.removeAttr('name');
+					}
+					else if(value && value.length > 0){
+						element.removeClass('lookDisabled')
+						element.attr('name', name);
+					}
+				}
+
+				return{
+					restrict: 'A',
+					require: 'ngModel',
+					link: function(scope, element, attr, ngModel){
+						ngModel.$viewChangeListeners.push(function(){
+							process(element, attr['name'], ngModel);
+						});
+						ngModel.$formatters.push(function(value){
+							process(element, attr['name'], ngModel);
+							return value;
+						});
+					}
+				}
+			})
+			.filter('trustUrl', function ($sce) {
+				return function(url) {
+				  return $sce.trustAsResourceUrl(url);
+				};
+			  })
+			  .controller('MainController', ['$scope', function($scope){
+				  $scope.state = makeid(10);
+				  $scope.pageurl = window.location.origin + window.location.path;
+				  $scope.setIDPResponse = function(data){
+						if(data)
+							$scope.idpResponse = data;
+						else
+							delete $scope.idpResponse;
+				  }
+				  
+				  $scope.restart = function(){
+					  window.location.href = window.location.origin + window.location.pathname;
+				  }
+
+				  $scope.storeValue = function(key, value){
+					if(value && value.length > 0)
+						localStorage.setItem(key, value);
+					else
+						localStorage.removeItem(key);
+				  }
+			  }])
+			.controller('Step1', ['$scope', function($scope){
+				$scope.response_type = localStorage.getItem('response_type') || 'code';
+				$scope.authorization_endpoint = localStorage.getItem('authorization_endpoint');
+				$scope.client_id = localStorage.getItem('client_id');
+				$scope.nonce = localStorage.getItem('nonce');
+				$scope.state = localStorage.getItem('state');
+				$scope.claims = localStorage.getItem('claims');
+				$scope.redirect_uri = localStorage.getItem('redirect_uri') || window.location.origin + window.location.pathname;
+
+				$scope.onResponseTypeChange = function(evt){
+					console.log(evt);
+				}
+
+				$scope.beforeSubmit = function(){
+					$scope.storeValue('authorization_endpoint', $scope.authorization_endpoint);					
+					$scope.storeValue('client_id', $scope.client_id);					
+					$scope.storeValue('response_type', $scope.response_type);					
+					$scope.storeValue('redirect_uri', $scope.redirect_uri);
+					$scope.storeValue('claims', $scope.claims);					
+					$scope.storeValue('nonce', $scope.nonce);
+					$scope.storeValue('state', $scope.state);
+					$scope.storeValue('claims', $scope.claims);
+				}
+			}])
+			.controller('ImplicitFlowStep2', ['$scope', function($scope){
+				var rt = localStorage.getItem('response_type');
+				if(rt){
+					if(    rt == 'id_token' || rt == 'id_token token' || rt == 'code id_token' || rt == 'code token' || rt == 'code id_token token'// OIDC
+						|| rt == 'token' //OAuth2
+					){
+						var response = parseHashParams();
+						$scope.setIDPResponse(  response );
+						$scope.time = new Date();
+					}
+				}
+			}])
+			.controller('CodeFlowStep2', ['$scope', '$location', function($scope, $location){
+				var rt = localStorage.getItem('response_type');
+				if(rt){
+					if(rt == 'code'	// OIDC
+					   || rt == 'none' // OAuth2
+					){
+						var response = $location.search();
+						$scope.data = response;
+						$scope.time = new Date();
+					}
+				}
+			}])
+			.controller('CodeFlowStep3', ['$scope', '$http', '$location', function($scope, $http, $location){
+				var paramCode = $location.search().code;
+				var redirect_uri = localStorage.getItem('redirect_uri') || window.location.origin + window.location.pathname;
+				$scope.code = paramCode;
+				$scope.client_id = localStorage.getItem('client_id');
+				$scope.client_secret = localStorage.getItem('client_secret');
+				$scope.token_endpoint = localStorage.getItem('token_endpoint');
+				$scope.grant_type = 'authorization_code';//localStorage.getItem('grant_type') || 'authorization_code';
+				$scope.syncRefresh = localStorage.getItem('syncRefresh') === 'true';
+
+				$scope.redirect_uri = redirect_uri;
+				
+				$scope.submit = function(evt) {
+					evt.preventDefault();
+					delete $scope.error;
+					delete $scope.unknownError;
+					$scope.setIDPResponse( null );
+
+					var $theForm = $(evt.target);
+
+					$http({
+						method: $theForm.attr('method'),
+						url: $theForm.attr('action'),
+						data: $theForm.serialize(),
+						headers: { 
+							"Authorization": "Basic " + btoa($scope.client_id + ':' + $scope.client_secret),
+							'Content-Type': 'application/x-www-form-urlencoded'
+						}
+					})
+					.then(function(respObj){
+						$scope.time = new Date();
+						$scope.setIDPResponse( respObj.data );
+
+						$scope.storeValue('client_id', $scope.client_id);
+						$scope.storeValue('client_secret', $scope.client_secret);
+
+						$scope.storeValue('token_endpoint', $scope.token_endpoint);
+						$scope.storeValue('redirect_uri', $scope.redirect_uri);
+						//$scope.storeValue('grant_type', $scope.grant_type);
+						
+						if($scope.syncRefresh === true){
+							switchToRefresh();
+						}
+					})
+					.catch(function(error){
+						console.error('Exchange code with token error', error);
+						if(error.status == -1)$scope.unknownError = true;
+						else $scope.error = error.data.error_description;
+					});
+
+					 return false;
+				};
+
+				$scope.codeClick = function(evt){
+					evt.preventDefault();
+					$scope.grant_type = 'authorization_code';
+					$scope.code = paramCode;
+					$scope.redirect_uri = redirect_uri;
+					delete $scope.scope;
+					delete $scope.refresh_token;
+				};
+				
+				$scope.refreshClick = function(evt){
+					evt.preventDefault();
+					switchToRefresh();
+					
+				}
+				
+				var switchToRefresh = function(){
+					delete $scope.code;
+					delete $scope.redirect_uri;
+					if($scope.idpResponse){
+						$scope.refresh_token = $scope.idpResponse.refresh_token;
+					}
+					$scope.scope = 'openid';
+					$scope.grant_type = 'refresh_token';
+				}
+			}])
+			.controller('IDPResponse',['$scope', '$http', function($scope, $http){
+				$scope.userinfoEndpoint = localStorage.getItem('userinfo_endpoint') || '';
+				
+				$scope.seeAccessToken = function(){
+					window.open('https://jwt.io/#debugger?&id_token=' + $scope.idpResponse.access_token);
+				}
+				$scope.seeIDToken = function(){
+					window.open('https://jwt.io/#debugger?&id_token=' + $scope.idpResponse.id_token);
+				}
+				
+				$scope.getUserInfo = function(){
+					delete $scope.userinfo;
+
+					$http({
+						method: 'GET',
+						url: $scope.userinfoEndpoint,
+						headers: { 
+							"Authorization": "Bearer " + $scope.idpResponse.access_token
+						}
+					})
+					.then(function(respObj){
+						localStorage.setItem('userinfo_endpoint', $scope.userinfoEndpoint);
+						$scope.userinfo = respObj.data;
+					});
+				}
+			}]);
+			
+			
+			function parseHashParams(){
+				var params = window.location.hash;
+				if(params.length == 0)return null;
+
+				// remove # character
+				params = params.substring(1);
+				var tokens = params.split('&');
+				var data = {};
+
+				//Read and decode params
+				for(var i=0; i <tokens.length; i++){
+					var kv = tokens[i].split('=');
+					var key = kv[0];
+					var val = decodeURIComponent(kv[1]);
+					data[key] = val;
+				}
+				return data;
+			}
+
+		</script>
+	</body>
+</html>
